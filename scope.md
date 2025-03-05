@@ -10,3 +10,14 @@ Features:
 - DevOps: Docker, Kubernetes (AWS EKS), Nginx, CI/CD, monitoring (Prometheus/Grafana).
 Tech Stack: React, React Native, Node.js, Express, TypeScript, PostgreSQL, Redis, Socket.IO, etc.
 Timeline: Feb 24 - Aug 29, 2025 (24-27 weeks).
+
+
+
+**Objective**: Build a robust backend, starting with authentication.
+**Authentication Features**:
+- JWT-based signup/login with email/password.
+- OAuth 2.0 (Google) for social login.
+- Two-Factor Authentication (2FA) with Google Authenticator.
+- Secure user data (hashed passwords, encrypted 2FA secrets).
+**Tech Stack**: Node.js, Express, TypeScript, PostgreSQL, Prisma, JWT, Passport.js, Speakeasy.
+**Timeline**: Auth completed by Mar 14, 2025; backend by May/June 2025.

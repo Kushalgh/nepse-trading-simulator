@@ -2,12 +2,16 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import "dotenv/config";
+import authRoutes from "./routes/auth";
+import passport from "./utils/passport";
 
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
 app.use(express.json());
+app.use(passport.initialize());
+app.use("/auth", authRoutes);
 
 app.get("/stocks", (req, res) => {
   res.json([{ symbol: "NTC", price: 500 }]); // Mock data
