@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  passwordHash   String
+  username       String
+  virtualFunds   Float     @default(1000000)
+  twoFactorSecret String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  transactions   Transaction[]
+  portfolios     Portfolio[]
+  pendingOrders  PendingOrder[]
+  achievements   Achievement[]
+}
+
+model Stock {
+  id            String    @id @default(uuid())
+  symbol        String    @unique
+  name          String
+  price         Float
+  trend         String
+  sector        String
+  lastUpdated   DateTime  @default(now())
+  transactions  Transaction[]
+  portfolios    Portfolio[]
+  pendingOrders PendingOrder[]
+  logs          WebSocketLog[]
+}
+
+model Transaction {
+  id          String    @id @default(uuid())
+  userId      String
+  stockId     String
+  quantity    Int
+  price       Float
+  fee         Float
+  totalAmount Float
+  action      String    // "buy" or "sell"
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  stock       Stock     @relation(fields: [stockId], references: [id])
+}
+
+model Portfolio {
+  id          String    @id @default(uuid())
+  userId      String
+  stockId     String
+  quantity    Int
+  avgBuyPrice Float
+  user        User      @relation(fields: [userId], references: [id])
+  stock       Stock     @relation(fields: [stockId], references: [id])
+}
+
+model PendingOrder {
+  id         String    @id @default(uuid())
+  userId     String
+  stockId    String
+  quantity   Int
+  limitPrice Float
+  type       String    // "limit" or "stop"
+  action     String    // "buy" or "sell"
+  status     String    // "pending", "executed", "cancelled"
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id])
+  stock      Stock     @relation(fields: [stockId], references: [id])
+}
+
+model Achievement {
+  id          String    @id @default(uuid())
+  userId      String
+  name        String
+  description String
+  earnedAt    DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+model WebSocketLog {
+  id        String    @id @default(uuid())
+  stockId   String
+  price     Float
+  trend     String
+  timestamp DateTime  @default(now())
+  stock     Stock     @relation(fields: [stockId], references: [id])
+}
