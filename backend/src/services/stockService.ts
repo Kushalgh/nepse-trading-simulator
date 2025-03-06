@@ -33,11 +33,10 @@ export interface Order {
   price: number;
 }
 
-// Helper function to convert UTC to Nepal Standard Time (UTC+5:45)
 const toNepalTime = (date: Date): Date => {
   const utcTime = date.getTime();
-  const nstOffset = 5 * 60 + 45; // 5 hours 45 minutes in minutes
-  const nstTime = utcTime + nstOffset * 60 * 1000; // Convert to milliseconds
+  const nstOffset = 5 * 60 + 45;
+  const nstTime = utcTime + nstOffset * 60 * 1000;
   return new Date(nstTime);
 };
 
@@ -93,7 +92,7 @@ const fetchStockDataWithRetry = async (
         return [];
       }
 
-      const nstNow = toNepalTime(new Date()); // Current time in NST
+      const nstNow = toNepalTime(new Date());
 
       for (const stock of stocks) {
         const upsertedStock = await prisma.stock.upsert({
@@ -106,7 +105,7 @@ const fetchStockDataWithRetry = async (
             open: stock.open,
             quantity: stock.quantity,
             trend: stock.trend,
-            lastUpdated: nstNow, // Adjusted to NST
+            lastUpdated: nstNow,
           },
           create: {
             symbol: stock.symbol,
@@ -161,7 +160,7 @@ export const flushLogsToDB = async () => {
   const stocks = await prisma.stock.findMany({
     select: { symbol: true, id: true },
   });
-  const nstNow = toNepalTime(new Date()); // Current time in NST
+  const nstNow = toNepalTime(new Date());
   for (const stock of stocks) {
     const logs = await redisClient.lRange(`stock:log:${stock.symbol}`, 0, -1);
     if (logs.length > 0) {
@@ -172,7 +171,7 @@ export const flushLogsToDB = async () => {
             stockId: stock.id,
             price: parsedLog.price,
             trend: parsedLog.trend,
-            timestamp: new Date(parsedLog.timestamp), // Already in NST from Redis
+            timestamp: new Date(parsedLog.timestamp),
           };
         }),
       });
@@ -206,7 +205,6 @@ export const getAllStocks = async (): Promise<Stock[]> => {
     open: stock.open,
     quantity: stock.quantity,
     trend: stock.trend,
-    // No adjustment needed here; already stored as NST
   }));
 };
 
