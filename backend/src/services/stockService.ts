@@ -33,6 +33,14 @@ export interface Order {
   price: number;
 }
 
+// Helper function to convert UTC to Nepal Standard Time (UTC+5:45)
+const toNepalTime = (date: Date): Date => {
+  const utcTime = date.getTime();
+  const nstOffset = 5 * 60 + 45; // 5 hours 45 minutes in minutes
+  const nstTime = utcTime + nstOffset * 60 * 1000; // Convert to milliseconds
+  return new Date(nstTime);
+};
+
 const orderBook: { [symbol: string]: Order[] } = {};
 
 const fetchStockDataWithRetry = async (
@@ -85,6 +93,8 @@ const fetchStockDataWithRetry = async (
         return [];
       }
 
+      const nstNow = toNepalTime(new Date()); // Current time in NST
+
       for (const stock of stocks) {
         const upsertedStock = await prisma.stock.upsert({
           where: { symbol: stock.symbol },
@@ -96,7 +106,7 @@ const fetchStockDataWithRetry = async (
             open: stock.open,
             quantity: stock.quantity,
             trend: stock.trend,
-            lastUpdated: new Date(),
+            lastUpdated: nstNow, // Adjusted to NST
           },
           create: {
             symbol: stock.symbol,
@@ -108,7 +118,7 @@ const fetchStockDataWithRetry = async (
             open: stock.open,
             quantity: stock.quantity,
             trend: stock.trend,
-            lastUpdated: new Date(),
+            lastUpdated: nstNow,
           },
         });
         await redisClient.setEx(stock.symbol, 60, stock.ltp.toString());
@@ -120,7 +130,7 @@ const fetchStockDataWithRetry = async (
               stockId: upsertedStock.id,
               price: stock.ltp,
               trend: stock.trend,
-              timestamp: new Date().toISOString(),
+              timestamp: nstNow.toISOString(), // Adjusted to NST
             })
           );
           await redisClient.expire(`stock:log:${stock.symbol}`, 3600);
@@ -151,11 +161,20 @@ export const flushLogsToDB = async () => {
   const stocks = await prisma.stock.findMany({
     select: { symbol: true, id: true },
   });
+  const nstNow = toNepalTime(new Date()); // Current time in NST
   for (const stock of stocks) {
     const logs = await redisClient.lRange(`stock:log:${stock.symbol}`, 0, -1);
     if (logs.length > 0) {
       await prisma.webSocketLog.createMany({
-        data: logs.map((log) => JSON.parse(log)),
+        data: logs.map((log) => {
+          const parsedLog = JSON.parse(log);
+          return {
+            stockId: stock.id,
+            price: parsedLog.price,
+            trend: parsedLog.trend,
+            timestamp: new Date(parsedLog.timestamp), // Already in NST from Redis
+          };
+        }),
       });
       await redisClient.del(`stock:log:${stock.symbol}`);
     }
@@ -174,6 +193,7 @@ export const getAllStocks = async (): Promise<Stock[]> => {
       open: true,
       quantity: true,
       trend: true,
+      lastUpdated: true,
     },
   });
   return stocks.map((stock) => ({
@@ -186,6 +206,7 @@ export const getAllStocks = async (): Promise<Stock[]> => {
     open: stock.open,
     quantity: stock.quantity,
     trend: stock.trend,
+    // No adjustment needed here; already stored as NST
   }));
 };
 
@@ -205,6 +226,7 @@ export const getStockBySymbol = async (
       open: true,
       quantity: true,
       trend: true,
+      lastUpdated: true,
     },
   });
   if (!stock) return null;
