@@ -35,14 +35,13 @@ export const login = async (req: Request, res: Response) => {
   const { email, password, twoFactorCode } = req.body;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+    const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
+
     if (user.twoFactorSecret) {
       const verified = speakeasy.totp.verify({
         secret: user.twoFactorSecret,
@@ -56,7 +55,6 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1h" });
-
     res.status(200).json({ token });
     return;
   } catch (error) {

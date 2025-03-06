@@ -23,17 +23,21 @@ model User {
 }
 
 model Stock {
-  id            String    @id @default(uuid())
-  symbol        String    @unique
-  name          String
-  price         Float
-  trend         String
-  sector        String
-  lastUpdated   DateTime  @default(now())
-  transactions  Transaction[]
-  portfolios    Portfolio[]
+  id          String    @id @default(uuid())
+  symbol      String    @unique
+  name        String
+  ltp         Float     // Last Traded Price
+  change      Float?    // % Change
+  high        Float     // Daily High
+  low         Float     // Daily Low
+  open        Float     // Opening Price
+  quantity    Int       // Quantity Traded
+  trend       String    // "up", "down", "neutral"
+  lastUpdated DateTime  @default(now())
+  transactions Transaction[]
+  portfolios  Portfolio[]
   pendingOrders PendingOrder[]
-  logs          WebSocketLog[]
+  logs        WebSocketLog[]
 }
 
 model Transaction {
