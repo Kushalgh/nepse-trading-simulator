@@ -12,7 +12,8 @@ model User {
   email          String    @unique
   passwordHash   String
   username       String
-  virtualFunds   Float     @default(1000000)
+  googleId       String?  //For Google OAuth 
+  cashBalance  Float     @default(1000000)
   twoFactorSecret String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

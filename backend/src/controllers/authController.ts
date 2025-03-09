@@ -3,9 +3,10 @@ import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import speakeasy from "speakeasy";
-import "dotenv/config";
+import { handleError } from "../utils/errorHandler";
+import { CONSTANTS } from "../constants/constants";
+import { ERRORS } from "../constants/errors";
 
-const JWT_SECRET = process.env.JWT_SECRET || "";
 const prisma = new PrismaClient();
 
 export const signup = async (req: Request, res: Response) => {
@@ -20,14 +21,21 @@ export const signup = async (req: Request, res: Response) => {
         email,
         passwordHash: hashedPassword,
         username,
-        virtualFunds: 1000000,
+        cashBalance: CONSTANTS.USER.CASH_BALANCE_DEFAULT,
         twoFactorSecret: secret.base32,
       },
     });
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1hr" });
+    const token = jwt.sign({ id: user.id }, CONSTANTS.AUTH.JWT_SECRET, {
+      expiresIn: CONSTANTS.AUTH.JWT_EXPIRATION,
+    });
     res.status(201).json({ token, twoFactorSecret: secret.base32 });
   } catch (error) {
-    res.status(400).json({ error: "User registration failed" });
+    handleError(
+      res,
+      error,
+      ERRORS.AUTH.USER_REGISTRATION_FAILED.message,
+      ERRORS.AUTH.USER_REGISTRATION_FAILED.statusCode
+    );
   }
 };
 
@@ -38,8 +46,12 @@ export const login = async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      res.status(401).json({ error: "Invalid credentials" });
-      return;
+      return handleError(
+        res,
+        null,
+        ERRORS.AUTH.INVALID_CREDENTIALS.message,
+        ERRORS.AUTH.INVALID_CREDENTIALS.statusCode
+      );
     }
 
     if (user.twoFactorSecret) {
@@ -49,17 +61,25 @@ export const login = async (req: Request, res: Response) => {
         token: twoFactorCode,
       });
       if (!verified) {
-        res.status(401).json({ error: "Invalid 2FA code" });
-        return;
+        return handleError(
+          res,
+          null,
+          ERRORS.AUTH.INVALID_2FA_CODE.message,
+          ERRORS.AUTH.INVALID_2FA_CODE.statusCode
+        );
       }
     }
 
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign({ id: user.id }, CONSTANTS.AUTH.JWT_SECRET, {
+      expiresIn: CONSTANTS.AUTH.JWT_EXPIRATION,
+    });
     res.status(200).json({ token });
-    return;
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
-    return;
+    handleError(
+      res,
+      error,
+      ERRORS.AUTH.LOGIN_FAILED.message,
+      ERRORS.AUTH.LOGIN_FAILED.statusCode
+    );
   }
 };

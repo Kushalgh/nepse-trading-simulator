@@ -3,9 +3,8 @@ import { createClient } from "redis";
 import { Server } from "socket.io";
 import * as cheerio from "cheerio";
 import puppeteer from "puppeteer";
-import * as dotenv from "dotenv";
-
-dotenv.config();
+import { toNepalTime } from "../utils/helpers";
+import { CONSTANTS } from "../constants/constants";
 
 const prisma = new PrismaClient();
 const redisClient = createClient({ url: process.env.REDIS_URL });
@@ -33,13 +32,6 @@ export interface Order {
   price: number;
 }
 
-const toNepalTime = (date: Date): Date => {
-  const utcTime = date.getTime();
-  const nstOffset = 5 * 60 + 45;
-  const nstTime = utcTime + nstOffset * 60 * 1000;
-  return new Date(nstTime);
-};
-
 const orderBook: { [symbol: string]: Order[] } = {};
 
 const fetchStockDataWithRetry = async (
@@ -50,7 +42,7 @@ const fetchStockDataWithRetry = async (
     try {
       const browser = await puppeteer.launch({ headless: true });
       const page = await browser.newPage();
-      await page.goto(process.env.SCRAPE_URL!, {
+      await page.goto(CONSTANTS.STOCK.SCRAPE_URL, {
         waitUntil: "networkidle2",
         timeout: 60000,
       });
@@ -120,7 +112,11 @@ const fetchStockDataWithRetry = async (
             lastUpdated: nstNow,
           },
         });
-        await redisClient.setEx(stock.symbol, 60, stock.ltp.toString());
+        await redisClient.setEx(
+          stock.symbol,
+          CONSTANTS.REDIS.EXPIRATION,
+          stock.ltp.toString()
+        );
         const orders = updateOrderBook(stock.symbol);
         if (io) {
           await redisClient.lPush(
@@ -129,10 +125,13 @@ const fetchStockDataWithRetry = async (
               stockId: upsertedStock.id,
               price: stock.ltp,
               trend: stock.trend,
-              timestamp: nstNow.toISOString(), // Adjusted to NST
+              timestamp: nstNow.toISOString(),
             })
           );
-          await redisClient.expire(`stock:log:${stock.symbol}`, 3600);
+          await redisClient.expire(
+            `stock:log:${stock.symbol}`,
+            CONSTANTS.REDIS.STOCK_LOG_EXPIRATION
+          );
           io.emit("stockUpdate", { stocks, orderBook });
         }
       }
@@ -140,11 +139,7 @@ const fetchStockDataWithRetry = async (
       await browser.close();
       return stocks;
     } catch (error) {
-      const err = error as any;
-      console.error("Scraping error (attempt " + attempt + "):", {
-        message: err.message,
-        code: err.code || "Unknown error",
-      });
+      console.error(`Scraping error (attempt ${attempt}):`, error);
       if (attempt === retries) return [];
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
@@ -251,7 +246,12 @@ export const getCachedStockPrice = async (symbol: string): Promise<number> => {
     where: { symbol },
     select: { ltp: true },
   });
-  if (stock) await redisClient.setEx(symbol, 60, stock.ltp.toString());
+  if (stock)
+    await redisClient.setEx(
+      symbol,
+      CONSTANTS.REDIS.EXPIRATION,
+      stock.ltp.toString()
+    );
   return stock?.ltp || 0;
 };
 
@@ -274,6 +274,6 @@ export const startStockUpdates = (io: Server) => {
   fetchStockData(io);
   setInterval(
     () => fetchStockData(io),
-    parseInt(process.env.UPDATE_INTERVAL || "5000", 10)
+    parseInt(CONSTANTS.STOCK.UPDATE_INTERVAL, 10)
   );
 };

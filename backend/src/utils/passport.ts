@@ -1,15 +1,16 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { PrismaClient } from "@prisma/client";
+import { CONSTANTS } from "../constants/constants";
 
 const prisma = new PrismaClient();
 
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      callbackURL: "http://localhost:3000/auth/google/callback",
+      clientID: CONSTANTS.GOOGLE.CLIENT_ID,
+      clientSecret: CONSTANTS.GOOGLE.CLIENT_SECRET,
+      callbackURL: CONSTANTS.GOOGLE.CALLBACK_URL,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -22,7 +23,7 @@ passport.use(
               email: profile.emails![0].value,
               username: profile.displayName,
               passwordHash: "",
-              virtualFunds: 1000000,
+              cashBalance: CONSTANTS.USER.CASH_BALANCE_DEFAULT,
             },
           });
         }

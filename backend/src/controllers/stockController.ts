@@ -4,13 +4,20 @@ import {
   getStockBySymbol,
   getOrderBook,
 } from "../services/stockService";
+import { handleError } from "../utils/errorHandler";
+import { ERRORS } from "../constants/errors";
 
 export const getAllStocksController = async (req: Request, res: Response) => {
   try {
     const stocks = await getAllStocks();
     res.json(stocks);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch stocks" });
+    handleError(
+      res,
+      error,
+      ERRORS.STOCK.FETCH_STOCKS_FAILED.message,
+      ERRORS.STOCK.FETCH_STOCKS_FAILED.statusCode
+    );
   }
 };
 
@@ -22,12 +29,21 @@ export const getStockBySymbolController = async (
   try {
     const stock = await getStockBySymbol(symbol);
     if (!stock) {
-      res.status(404).json({ error: "Stock not found" });
-    } else {
-      res.json(stock);
+      return handleError(
+        res,
+        null,
+        ERRORS.STOCK.STOCK_NOT_FOUND.message,
+        ERRORS.STOCK.STOCK_NOT_FOUND.statusCode
+      );
     }
+    res.json(stock);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch stock" });
+    handleError(
+      res,
+      error,
+      ERRORS.STOCK.FETCH_STOCK_FAILED.message,
+      ERRORS.STOCK.FETCH_STOCK_FAILED.statusCode
+    );
   }
 };
 
@@ -36,11 +52,20 @@ export const getOrderBookController = async (req: Request, res: Response) => {
   try {
     const orders = getOrderBook(symbol);
     if (!orders.length) {
-      res.status(404).json({ error: "Order book not found" });
-    } else {
-      res.json(orders);
+      return handleError(
+        res,
+        null,
+        ERRORS.STOCK.ORDER_BOOK_NOT_FOUND.message,
+        ERRORS.STOCK.ORDER_BOOK_NOT_FOUND.statusCode
+      );
     }
+    res.json(orders);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch order book" });
+    handleError(
+      res,
+      error,
+      ERRORS.STOCK.FETCH_ORDER_BOOK_FAILED.message,
+      ERRORS.STOCK.FETCH_ORDER_BOOK_FAILED.statusCode
+    );
   }
 };
