@@ -1,3 +1,4 @@
+// app.ts
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -8,9 +9,14 @@ import {
   sellStockController,
 } from "./controllers/tradeController";
 import passport from "./utils/passport";
-import { startStockUpdates, flushLogsToDB } from "./services/stockService";
+import {
+  startStockUpdates,
+  flushLogsToDB,
+  shutdown,
+} from "./services/stockService";
 import * as cron from "node-cron";
 import { CONSTANTS } from "./constants/constants";
+import { authMiddleware } from "../src/utils/middlewares/authMiddleware";
 
 const app = express();
 const httpServer = createServer(app);
@@ -18,10 +24,12 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 
 app.use(express.json());
 app.use(passport.initialize());
+
 app.use("/auth", authRoutes);
 app.use("/stocks", stockRoutes);
-app.post("/trade/buy", buyStockController);
-app.post("/trade/sell", sellStockController);
+
+app.post("/trade/buy", authMiddleware, buyStockController);
+app.post("/trade/sell", authMiddleware, sellStockController);
 
 io.on("connection", (socket) => {
   console.log("Client connected");
@@ -33,26 +41,6 @@ async function initialize() {
   try {
     await startStockUpdates(io);
     cron.schedule("0 * * * *", flushLogsToDB);
-
-    app.post("/trade/buy", async (req, res) => {
-      await buyStockController(req, res);
-      if (res.statusCode === 201) {
-        io.emit("portfolioUpdate", {
-          userId: req.body.userId,
-          transaction: res.locals.transaction,
-        });
-      }
-    });
-
-    app.post("/trade/sell", async (req, res) => {
-      await sellStockController(req, res);
-      if (res.statusCode === 201) {
-        io.emit("portfolioUpdate", {
-          userId: req.body.userId,
-          transaction: res.locals.transaction,
-        });
-      }
-    });
   } catch (err) {
     console.error("Failed to start stock updates:", err);
   }
@@ -63,3 +51,15 @@ initialize();
 httpServer.listen(CONSTANTS.SERVER.PORT, () =>
   console.log(`Server running on port ${CONSTANTS.SERVER.PORT}`)
 );
+
+process.on("SIGTERM", async () => {
+  console.log("Shutting down...");
+  await shutdown();
+  httpServer.close(() => process.exit(0));
+});
+
+process.on("SIGINT", async () => {
+  console.log("Shutting down...");
+  await shutdown();
+  httpServer.close(() => process.exit(0));
+});

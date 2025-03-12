@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { createClient } from "redis";
 import { Server } from "socket.io";
 import * as cheerio from "cheerio";
-import puppeteer from "puppeteer";
+import puppeteer, { Browser, HTTPRequest } from "puppeteer";
 import { toNepalTime } from "../utils/helpers";
 import { CONSTANTS } from "../constants/constants";
 
@@ -10,6 +10,7 @@ const prisma = new PrismaClient();
 const redisClient = createClient({ url: process.env.REDIS_URL });
 
 redisClient.on("error", (err) => console.error("Redis error:", err));
+redisClient.on("connect", () => console.log("Redis connected successfully"));
 redisClient
   .connect()
   .catch((err) => console.error("Redis connect failed:", err));
@@ -33,25 +34,51 @@ export interface Order {
 }
 
 const orderBook: { [symbol: string]: Order[] } = {};
+let browser: Browser | null = null;
+
+const initializeBrowser = async () => {
+  if (!browser) {
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--single-process",
+      ],
+      protocolTimeout: 120000,
+    });
+  }
+  return browser;
+};
 
 const fetchStockDataWithRetry = async (
   io?: Server,
   retries = 3
 ): Promise<Stock[]> => {
+  const browserInstance = await initializeBrowser();
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const browser = await puppeteer.launch({ headless: true });
-      const page = await browser.newPage();
+      const page = await browserInstance.newPage();
+      await page.setRequestInterception(true);
+      page.on("request", (req: HTTPRequest) => {
+        if (["image", "stylesheet", "font"].includes(req.resourceType())) {
+          req.abort();
+        } else {
+          req.continue();
+        }
+      });
+
       await page.goto(CONSTANTS.STOCK.SCRAPE_URL, {
-        waitUntil: "networkidle2",
-        timeout: 60000,
+        waitUntil: "domcontentloaded",
+        timeout: 120000,
       });
 
       const html = await page.content();
       const $ = cheerio.load(html);
 
       const stocks: Stock[] = [];
-
       $("table.table tr").each((i, element) => {
         if (i === 0) return;
         const cols = $(element).find("td");
@@ -80,38 +107,42 @@ const fetchStockDataWithRetry = async (
       });
 
       if (stocks.length === 0) {
-        await browser.close();
+        await page.close();
         return [];
       }
 
       const nstNow = toNepalTime(new Date());
+      await prisma.$transaction(
+        stocks.map((stock) =>
+          prisma.stock.upsert({
+            where: { symbol: stock.symbol },
+            update: {
+              ltp: stock.ltp,
+              change: stock.change,
+              high: stock.high,
+              low: stock.low,
+              open: stock.open,
+              quantity: stock.quantity,
+              trend: stock.trend,
+              lastUpdated: nstNow,
+            },
+            create: {
+              symbol: stock.symbol,
+              name: stock.name,
+              ltp: stock.ltp,
+              change: stock.change,
+              high: stock.high,
+              low: stock.low,
+              open: stock.open,
+              quantity: stock.quantity,
+              trend: stock.trend,
+              lastUpdated: nstNow,
+            },
+          })
+        )
+      );
 
       for (const stock of stocks) {
-        const upsertedStock = await prisma.stock.upsert({
-          where: { symbol: stock.symbol },
-          update: {
-            ltp: stock.ltp,
-            change: stock.change,
-            high: stock.high,
-            low: stock.low,
-            open: stock.open,
-            quantity: stock.quantity,
-            trend: stock.trend,
-            lastUpdated: nstNow,
-          },
-          create: {
-            symbol: stock.symbol,
-            name: stock.name,
-            ltp: stock.ltp,
-            change: stock.change,
-            high: stock.high,
-            low: stock.low,
-            open: stock.open,
-            quantity: stock.quantity,
-            trend: stock.trend,
-            lastUpdated: nstNow,
-          },
-        });
         await redisClient.setEx(
           stock.symbol,
           CONSTANTS.REDIS.EXPIRATION,
@@ -122,7 +153,7 @@ const fetchStockDataWithRetry = async (
           await redisClient.lPush(
             `stock:log:${stock.symbol}`,
             JSON.stringify({
-              stockId: upsertedStock.id,
+              stockId: stock.symbol,
               price: stock.ltp,
               trend: stock.trend,
               timestamp: nstNow.toISOString(),
@@ -136,7 +167,7 @@ const fetchStockDataWithRetry = async (
         }
       }
 
-      await browser.close();
+      await page.close();
       return stocks;
     } catch (error) {
       console.error(`Scraping error (attempt ${attempt}):`, error);
@@ -270,10 +301,15 @@ export const updateOrderBook = (symbol: string): Order[] => {
   return orderBook[symbol];
 };
 
-export const startStockUpdates = (io: Server) => {
+export const startStockUpdates = async (io: Server) => {
+  await initializeBrowser();
   fetchStockData(io);
   setInterval(
     () => fetchStockData(io),
     parseInt(CONSTANTS.STOCK.UPDATE_INTERVAL, 10)
   );
+};
+
+export const shutdown = async () => {
+  if (browser) await browser.close();
 };

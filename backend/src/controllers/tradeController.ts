@@ -1,10 +1,16 @@
 import { Request, Response } from "express";
-import { buyStock, sellStock } from "../services/tradeService";
+import { buyStock, sellStock, TradeRequest } from "../services/tradeService";
 import { handleError } from "../utils/errorHandler";
 import { ERRORS } from "../constants/errors";
 
 export const buyStockController = async (req: Request, res: Response) => {
-  const { userId, symbol, quantity } = req.body;
+  const { symbol, quantity } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ error: "User not authenticated" });
+    return;
+  }
 
   try {
     const transaction = await buyStock({ userId, symbol, quantity });
@@ -39,11 +45,17 @@ export const buyStockController = async (req: Request, res: Response) => {
 };
 
 export const sellStockController = async (req: Request, res: Response) => {
-  const { userId, symbol, quantity } = req.body;
+  const { symbol, quantity } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ error: "User not authenticated" });
+    return;
+  }
 
   try {
     const transaction = await sellStock({ userId, symbol, quantity });
-    res.locals.transaction = transaction; // Store for WebSocket
+    res.locals.transaction = transaction;
     res.status(201).json(transaction);
   } catch (error) {
     const message =

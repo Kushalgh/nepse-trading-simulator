@@ -27,7 +27,7 @@
 
 ---
 
-## Sprint 1: Data Scraping (March 6, 2025)
+## Sprint 1: Data Scraping 
 **Objective**: Establish core backend functionality for stock data scraping and real-time updates.  
 **Tasks Completed**:  
 - **Database Setup**: Synced PostgreSQL (`trading_app`) with Prisma schema (`Stock` model) using `npx prisma db push` and generated Prisma Client (`npx prisma generate`).  
@@ -53,5 +53,18 @@
 - **Docker**: Local PostgreSQL and Redis instances (assumed).  
 
 **Status**: Completed core scraping, storage, and real-time updates
+
+
+
+## Sprint 2: Trading Logic 
+**Objective**: Enable users to trade stocks with virtual funds, track transactions, and analyze portfolios.  
+**Tasks**:  
+- **Schema Update**: Added `User`, `Portfolio`, and `Transaction` models to Prisma schema with NPR 1M initial funds.  
+- **Trading API**: Build `POST /buy` and `POST /sell` endpoints for market orders.  
+- **Business Logic**: Implement buy/sell mechanics with 0.4% transaction fees and cash balance checks.  
+- **Portfolio Sync**: Update user portfolio via WebSocket after trades.  
+- **Future Enhancements**: Add limit/stop orders and portfolio analytics (P/L, holdings value).  
+**Tech Stack**: Node.js, TypeScript, Express, PostgreSQL, Prisma, Redis, Socket.IO.  
+**Status**: In progress; schema updated, next step is trading endpoints.
 
 ---

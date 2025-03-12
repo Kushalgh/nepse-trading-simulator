@@ -1,3 +1,4 @@
+// src/services/tradeService.ts
 import { PrismaClient } from "@prisma/client";
 import { getCachedStockPrice } from "./stockService";
 import { toNepalTime } from "../utils/helpers";
@@ -16,6 +17,9 @@ export const buyStock = async ({ userId, symbol, quantity }: TradeRequest) => {
   const stockPrice = await getCachedStockPrice(symbol);
   if (!stockPrice) throw new Error(ERRORS.TRADE.STOCK_NOT_FOUND.message);
 
+  const stock = await prisma.stock.findUnique({ where: { symbol } });
+  if (!stock) throw new Error(ERRORS.TRADE.STOCK_NOT_FOUND.message);
+
   const subtotal = stockPrice * quantity;
   const fee = subtotal * CONSTANTS.TRADE.FEE_RATE;
   const totalCost = subtotal + fee;
@@ -31,7 +35,7 @@ export const buyStock = async ({ userId, symbol, quantity }: TradeRequest) => {
     });
 
     const portfolio = await tx.portfolio.findFirst({
-      where: { userId, stockId: symbol },
+      where: { userId, stockId: stock.id },
     });
     if (portfolio) {
       const newQuantity = portfolio.quantity + quantity;
@@ -45,7 +49,7 @@ export const buyStock = async ({ userId, symbol, quantity }: TradeRequest) => {
       await tx.portfolio.create({
         data: {
           userId,
-          stockId: symbol,
+          stockId: stock.id,
           quantity,
           avgBuyPrice: stockPrice,
         },
@@ -55,7 +59,7 @@ export const buyStock = async ({ userId, symbol, quantity }: TradeRequest) => {
     const transaction = await tx.transaction.create({
       data: {
         userId,
-        stockId: symbol,
+        stockId: stock.id,
         action: "buy",
         quantity,
         price: stockPrice,
@@ -75,17 +79,20 @@ export const sellStock = async ({ userId, symbol, quantity }: TradeRequest) => {
   const stockPrice = await getCachedStockPrice(symbol);
   if (!stockPrice) throw new Error(ERRORS.TRADE.STOCK_NOT_FOUND.message);
 
+  const stock = await prisma.stock.findUnique({ where: { symbol } });
+  if (!stock) throw new Error(ERRORS.TRADE.STOCK_NOT_FOUND.message);
+
   const subtotal = stockPrice * quantity;
   const fee = subtotal * CONSTANTS.TRADE.FEE_RATE;
   const totalReceived = subtotal - fee;
 
-  const portfolio = await prisma.portfolio.findFirst({
-    where: { userId, stockId: symbol },
-  });
-  if (!portfolio || portfolio.quantity < quantity)
-    throw new Error("Insufficient stock quantity");
-
   const result = await prisma.$transaction(async (tx) => {
+    const portfolio = await tx.portfolio.findFirst({
+      where: { userId, stockId: stock.id },
+    });
+    if (!portfolio || portfolio.quantity < quantity)
+      throw new Error("Insufficient stock quantity");
+
     const user = await tx.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error("User not found");
     await tx.user.update({
@@ -103,11 +110,10 @@ export const sellStock = async ({ userId, symbol, quantity }: TradeRequest) => {
       });
     }
 
-    // Log transaction
     const transaction = await tx.transaction.create({
       data: {
         userId,
-        stockId: symbol,
+        stockId: stock.id,
         action: "sell",
         quantity,
         price: stockPrice,
