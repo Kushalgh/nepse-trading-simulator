@@ -4,6 +4,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import authRoutes from "./routes/authRoutes";
 import stockRoutes from "./routes/stockRoutes";
+import portfolioRoutes from "./routes/portfolioRoutes";
 import {
   buyStockController,
   sellStockController,
@@ -27,6 +28,7 @@ app.use(passport.initialize());
 
 app.use("/auth", authRoutes);
 app.use("/stocks", stockRoutes);
+app.use("/portfolio", portfolioRoutes);
 
 app.post("/trade/buy", authMiddleware, buyStockController);
 app.post("/trade/sell", authMiddleware, sellStockController);

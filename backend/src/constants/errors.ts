@@ -53,4 +53,10 @@ export const ERRORS = {
       statusCode: 500,
     },
   },
+  GENERIC: {
+    SERVER_ERROR: {
+      message: "Internal server error",
+      statusCode: 500,
+    },
+  },
 } as const;

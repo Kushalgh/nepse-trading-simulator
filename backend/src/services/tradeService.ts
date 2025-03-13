@@ -1,7 +1,11 @@
-// src/services/tradeService.ts
 import { PrismaClient } from "@prisma/client";
+import { Server } from "socket.io";
 import { getCachedStockPrice } from "./stockService";
-import { toNepalTime } from "../utils/helpers";
+import {
+  toNepalTime,
+  calculateStockMetrics,
+  PortfolioStock,
+} from "../utils/helpers";
 import { CONSTANTS } from "../constants/constants";
 import { ERRORS } from "../constants/errors";
 
@@ -12,6 +16,12 @@ export interface TradeRequest {
   symbol: string;
   quantity: number;
 }
+
+let io: Server | null = null;
+
+export const setIo = (socketIo: Server) => {
+  io = socketIo;
+};
 
 export const buyStock = async ({ userId, symbol, quantity }: TradeRequest) => {
   const stockPrice = await getCachedStockPrice(symbol);
@@ -69,6 +79,43 @@ export const buyStock = async ({ userId, symbol, quantity }: TradeRequest) => {
       },
     });
 
+    if (io) {
+      const updatedPortfolio = await prisma.portfolio.findMany({
+        where: { userId },
+        include: { stock: { select: { symbol: true } } },
+      });
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { cashBalance: true },
+      });
+
+      const portfolioData: PortfolioStock[] = await Promise.all(
+        updatedPortfolio.map((p) => calculateStockMetrics(p, p.stock))
+      );
+
+      const totalValue = portfolioData.reduce(
+        (sum, item) => sum + item.currentValue,
+        0
+      );
+      const totalGainLoss = portfolioData.reduce(
+        (sum, item) => sum + item.gainLoss,
+        0
+      );
+      const totalInvested = portfolioData.reduce(
+        (sum, item) => sum + item.investedValue,
+        0
+      );
+
+      io.to(userId).emit("portfolioUpdate", {
+        userId,
+        portfolio: portfolioData,
+        totalValue,
+        totalGainLoss,
+        totalInvested,
+        cashBalance: updatedUser!.cashBalance,
+      });
+    }
+
     return transaction;
   });
 
@@ -95,6 +142,7 @@ export const sellStock = async ({ userId, symbol, quantity }: TradeRequest) => {
 
     const user = await tx.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error("User not found");
+
     await tx.user.update({
       where: { id: userId },
       data: { cashBalance: user.cashBalance + totalReceived },
@@ -122,6 +170,43 @@ export const sellStock = async ({ userId, symbol, quantity }: TradeRequest) => {
         createdAt: toNepalTime(new Date()),
       },
     });
+
+    if (io) {
+      const updatedPortfolio = await prisma.portfolio.findMany({
+        where: { userId },
+        include: { stock: { select: { symbol: true } } },
+      });
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { cashBalance: true },
+      });
+
+      const portfolioData: PortfolioStock[] = await Promise.all(
+        updatedPortfolio.map((p) => calculateStockMetrics(p, p.stock))
+      );
+
+      const totalValue = portfolioData.reduce(
+        (sum, item) => sum + item.currentValue,
+        0
+      );
+      const totalGainLoss = portfolioData.reduce(
+        (sum, item) => sum + item.gainLoss,
+        0
+      );
+      const totalInvested = portfolioData.reduce(
+        (sum, item) => sum + item.investedValue,
+        0
+      );
+
+      io.to(userId).emit("portfolioUpdate", {
+        userId,
+        portfolio: portfolioData,
+        totalValue,
+        totalGainLoss,
+        totalInvested,
+        cashBalance: updatedUser!.cashBalance,
+      });
+    }
 
     return transaction;
   });
