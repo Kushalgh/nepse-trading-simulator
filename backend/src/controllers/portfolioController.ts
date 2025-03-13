@@ -70,7 +70,6 @@ export const getPortfolioController = async (
       })
     );
 
-    // Aggregate totals
     const totalValue = portfolioData.reduce(
       (sum, item) => sum + item.currentValue,
       0

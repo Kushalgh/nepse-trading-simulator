@@ -156,7 +156,7 @@ const fetchStockDataWithRetry = async (
             `stock:log:${stock.symbol}`,
             CONSTANTS.REDIS.STOCK_LOG_EXPIRATION
           );
-          io.emit("stockUpdate", { stocks }); // Removed orderBook
+          io.emit("stockUpdate", { stocks });
         }
       }
 
@@ -173,7 +173,7 @@ const fetchStockDataWithRetry = async (
 
 export const fetchStockData = async (io?: Server) => {
   const stocks = await fetchStockDataWithRetry(io);
-  await checkPendingOrders(); // Check pending orders after price update
+  await checkPendingOrders();
   return stocks;
 };
 

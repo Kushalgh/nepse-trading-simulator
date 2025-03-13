@@ -1,6 +1,5 @@
 import { getCachedStockPrice } from "../services/stockService";
 
-// Define interfaces for type safety
 export interface PortfolioStock {
   symbol: string;
   quantity: number;
@@ -12,7 +11,6 @@ export interface PortfolioStock {
   investedValue: number;
 }
 
-// Calculate metrics for a single portfolio stock
 export const calculateStockMetrics = async (
   portfolioItem: any,
   stock: any
@@ -38,7 +36,6 @@ export const calculateStockMetrics = async (
   };
 };
 
-// Existing helper
 export const toNepalTime = (date: Date): Date => {
   const utcTime = date.getTime();
   const nstOffset = 5 * 60 + 45; // 5 hours 45 minutes in minutes
