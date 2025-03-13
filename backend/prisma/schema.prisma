@@ -66,19 +66,22 @@ model Portfolio {
 }
 
 model PendingOrder {
-  id         String    @id @default(uuid())
-  userId     String
-  stockId    String
-  quantity   Int
-  limitPrice Float
-  type       String    // "limit" or "stop"
-  action     String    // "buy" or "sell"
-  status     String    // "pending", "executed", "cancelled"
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id])
-  stock      Stock     @relation(fields: [stockId], references: [id])
+  id             String        @id @default(uuid())
+  userId         String
+  stockId        String
+  quantity       Int
+  limitPrice     Float
+  type           String        // "limit" or "stop"
+  action         String        // "buy" or "sell"
+  status         String        // "pending", "executed", "cancelled"
+  createdAt      DateTime      @default(now())
+  expiresAt      DateTime?     // Optional expiration
+  matchedOrderId String?       @unique @map("matched_order_id") // Add @unique
+  user           User          @relation(fields: [userId], references: [id])
+  stock          Stock         @relation(fields: [stockId], references: [id])
+  matchedOrder   PendingOrder? @relation("MatchedOrders", fields: [matchedOrderId], references: [id])
+  inverseMatched PendingOrder? @relation("MatchedOrders")
 }
-
 model Achievement {
   id          String    @id @default(uuid())
   userId      String

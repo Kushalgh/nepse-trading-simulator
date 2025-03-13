@@ -1,23 +1,20 @@
-// app.ts
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import authRoutes from "./routes/authRoutes";
 import stockRoutes from "./routes/stockRoutes";
 import portfolioRoutes from "./routes/portfolioRoutes";
-import {
-  buyStockController,
-  sellStockController,
-} from "./controllers/tradeController";
+import tradeRoutes from "./routes/tradeRoutes";
 import passport from "./utils/passport";
 import {
   startStockUpdates,
   flushLogsToDB,
   shutdown,
 } from "./services/stockService";
+import { setIo as setTradeIo } from "./services/tradeService";
+import { setIo as setOrderIo } from "./services/orderService";
 import * as cron from "node-cron";
 import { CONSTANTS } from "./constants/constants";
-import { authMiddleware } from "../src/utils/middlewares/authMiddleware";
 
 const app = express();
 const httpServer = createServer(app);
@@ -29,15 +26,16 @@ app.use(passport.initialize());
 app.use("/auth", authRoutes);
 app.use("/stocks", stockRoutes);
 app.use("/portfolio", portfolioRoutes);
-
-app.post("/trade/buy", authMiddleware, buyStockController);
-app.post("/trade/sell", authMiddleware, sellStockController);
+app.use("/trade", tradeRoutes);
 
 io.on("connection", (socket) => {
   console.log("Client connected");
   socket.on("disconnect", () => console.log("Client disconnected"));
   socket.on("error", (err) => console.error("WebSocket error:", err));
 });
+
+setTradeIo(io);
+setOrderIo(io);
 
 async function initialize() {
   try {

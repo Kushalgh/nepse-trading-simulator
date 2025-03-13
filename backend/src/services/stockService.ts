@@ -5,6 +5,7 @@ import * as cheerio from "cheerio";
 import puppeteer, { Browser, HTTPRequest } from "puppeteer";
 import { toNepalTime } from "../utils/helpers";
 import { CONSTANTS } from "../constants/constants";
+import { checkPendingOrders } from "./orderService";
 
 const prisma = new PrismaClient();
 const redisClient = createClient({ url: process.env.REDIS_URL });
@@ -27,13 +28,6 @@ export interface Stock {
   trend: string;
 }
 
-export interface Order {
-  type: "buy" | "sell";
-  quantity: number;
-  price: number;
-}
-
-const orderBook: { [symbol: string]: Order[] } = {};
 let browser: Browser | null = null;
 
 const initializeBrowser = async () => {
@@ -148,7 +142,6 @@ const fetchStockDataWithRetry = async (
           CONSTANTS.REDIS.EXPIRATION,
           stock.ltp.toString()
         );
-        const orders = updateOrderBook(stock.symbol);
         if (io) {
           await redisClient.lPush(
             `stock:log:${stock.symbol}`,
@@ -163,7 +156,7 @@ const fetchStockDataWithRetry = async (
             `stock:log:${stock.symbol}`,
             CONSTANTS.REDIS.STOCK_LOG_EXPIRATION
           );
-          io.emit("stockUpdate", { stocks, orderBook });
+          io.emit("stockUpdate", { stocks }); // Removed orderBook
         }
       }
 
@@ -179,7 +172,9 @@ const fetchStockDataWithRetry = async (
 };
 
 export const fetchStockData = async (io?: Server) => {
-  return fetchStockDataWithRetry(io);
+  const stocks = await fetchStockDataWithRetry(io);
+  await checkPendingOrders(); // Check pending orders after price update
+  return stocks;
 };
 
 export const flushLogsToDB = async () => {
@@ -267,9 +262,6 @@ export const getStockBySymbol = async (
   };
 };
 
-export const getOrderBook = (symbol: string): Order[] =>
-  orderBook[symbol] || [];
-
 export const getCachedStockPrice = async (symbol: string): Promise<number> => {
   const cached = await redisClient.get(symbol);
   if (cached) return parseFloat(cached);
@@ -284,21 +276,6 @@ export const getCachedStockPrice = async (symbol: string): Promise<number> => {
       stock.ltp.toString()
     );
   return stock?.ltp || 0;
-};
-
-export const updateOrderBook = (symbol: string): Order[] => {
-  const buyOrder: Order = {
-    type: "buy",
-    quantity: Math.floor(Math.random() * 10) + 1,
-    price: Math.floor(Math.random() * 1000),
-  };
-  const sellOrder: Order = {
-    type: "sell",
-    quantity: Math.floor(Math.random() * 10) + 1,
-    price: Math.floor(Math.random() * 1000),
-  };
-  orderBook[symbol] = [buyOrder, sellOrder];
-  return orderBook[symbol];
 };
 
 export const startStockUpdates = async (io: Server) => {

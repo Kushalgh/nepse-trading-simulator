@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Transaction } from "@prisma/client";
 import { Server } from "socket.io";
 import { getCachedStockPrice } from "./stockService";
 import {
@@ -23,7 +23,11 @@ export const setIo = (socketIo: Server) => {
   io = socketIo;
 };
 
-export const buyStock = async ({ userId, symbol, quantity }: TradeRequest) => {
+export const buyStock = async ({
+  userId,
+  symbol,
+  quantity,
+}: TradeRequest): Promise<Transaction> => {
   const stockPrice = await getCachedStockPrice(symbol);
   if (!stockPrice) throw new Error(ERRORS.TRADE.STOCK_NOT_FOUND.message);
 
@@ -106,7 +110,7 @@ export const buyStock = async ({ userId, symbol, quantity }: TradeRequest) => {
         0
       );
 
-      io.to(userId).emit("portfolioUpdate", {
+      io?.to(userId).emit("portfolioUpdate", {
         userId,
         portfolio: portfolioData,
         totalValue,
@@ -122,7 +126,11 @@ export const buyStock = async ({ userId, symbol, quantity }: TradeRequest) => {
   return result;
 };
 
-export const sellStock = async ({ userId, symbol, quantity }: TradeRequest) => {
+export const sellStock = async ({
+  userId,
+  symbol,
+  quantity,
+}: TradeRequest): Promise<Transaction> => {
   const stockPrice = await getCachedStockPrice(symbol);
   if (!stockPrice) throw new Error(ERRORS.TRADE.STOCK_NOT_FOUND.message);
 
@@ -198,7 +206,7 @@ export const sellStock = async ({ userId, symbol, quantity }: TradeRequest) => {
         0
       );
 
-      io.to(userId).emit("portfolioUpdate", {
+      io?.to(userId).emit("portfolioUpdate", {
         userId,
         portfolio: portfolioData,
         totalValue,

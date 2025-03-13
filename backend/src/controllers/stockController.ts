@@ -1,9 +1,6 @@
 import { Request, Response } from "express";
-import {
-  getAllStocks,
-  getStockBySymbol,
-  getOrderBook,
-} from "../services/stockService";
+import { getAllStocks, getStockBySymbol } from "../services/stockService";
+import { getOrderBook } from "../services/orderService";
 import { handleError } from "../utils/errorHandler";
 import { ERRORS } from "../constants/errors";
 
@@ -50,8 +47,8 @@ export const getStockBySymbolController = async (
 export const getOrderBookController = async (req: Request, res: Response) => {
   const { symbol } = req.params;
   try {
-    const orders = getOrderBook(symbol);
-    if (!orders.length) {
+    const orderBook = await getOrderBook(symbol);
+    if (!orderBook.buyOrders.length && !orderBook.sellOrders.length) {
       return handleError(
         res,
         null,
@@ -59,7 +56,7 @@ export const getOrderBookController = async (req: Request, res: Response) => {
         ERRORS.STOCK.ORDER_BOOK_NOT_FOUND.statusCode
       );
     }
-    res.json(orders);
+    res.json(orderBook);
   } catch (error) {
     handleError(
       res,
