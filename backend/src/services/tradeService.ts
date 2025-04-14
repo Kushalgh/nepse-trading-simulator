@@ -7,6 +7,7 @@ import {
   PortfolioStock,
 } from "../utils/helpers";
 import { CONSTANTS } from "../constants/constants";
+import { checkAchievements } from "./achievementService";
 import { ERRORS } from "../constants/errors";
 
 const prisma = new PrismaClient();
@@ -82,6 +83,7 @@ export const buyStock = async ({
         createdAt: toNepalTime(new Date()),
       },
     });
+    await checkAchievements(userId);
 
     if (io) {
       const updatedPortfolio = await prisma.portfolio.findMany({
@@ -178,6 +180,7 @@ export const sellStock = async ({
         createdAt: toNepalTime(new Date()),
       },
     });
+    await checkAchievements(userId);
 
     if (io) {
       const updatedPortfolio = await prisma.portfolio.findMany({

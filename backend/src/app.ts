@@ -6,6 +6,9 @@ import stockRoutes from "./routes/stockRoutes";
 import portfolioRoutes from "./routes/portfolioRoutes";
 import tradeRoutes from "./routes/tradeRoutes";
 import passport from "./utils/passport";
+import gamificationRoutes from "./routes/gamificationRoutes";
+import { updateLeaderboard } from "./services/leaderboardService";
+import { setIo as setAchievementIo } from "./services/achievementService";
 import {
   startStockUpdates,
   flushLogsToDB,
@@ -27,6 +30,7 @@ app.use("/auth", authRoutes);
 app.use("/stocks", stockRoutes);
 app.use("/portfolio", portfolioRoutes);
 app.use("/trade", tradeRoutes);
+app.use("/gamification", gamificationRoutes);
 
 io.on("connection", (socket) => {
   console.log("Client connected");
@@ -36,11 +40,17 @@ io.on("connection", (socket) => {
 
 setTradeIo(io);
 setOrderIo(io);
+setAchievementIo(io);
 
 async function initialize() {
   try {
     await startStockUpdates(io);
     cron.schedule("0 * * * *", flushLogsToDB);
+    cron.schedule(
+      CONSTANTS.GAMIFICATION.LEADERBOARD.UPDATE_INTERVAL,
+      updateLeaderboard
+    );
+    await updateLeaderboard();
   } catch (err) {
     console.error("Failed to start stock updates:", err);
   }
