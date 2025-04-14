@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { usePendingOrders } from "@/hooks/use-pending-orders";
 import { api } from "@/lib/api";
 import { formatDistanceToNow } from "date-fns";

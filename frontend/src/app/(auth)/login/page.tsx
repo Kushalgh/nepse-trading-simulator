@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -29,7 +29,7 @@ export default function LoginPage() {
   const [showTwoFactor, setShowTwoFactor] = useState(false);
 
   const { login } = useAuth();
-
+  const { toast } = useToast();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,6 +42,7 @@ export default function LoginPage() {
       toast({
         title: "Login successful",
         description: "Welcome back to StockTrader Pro!",
+        variant: "success",
       });
       router.push("/dashboard");
     } catch (err: any) {

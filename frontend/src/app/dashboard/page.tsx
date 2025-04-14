@@ -17,9 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { useTransactions } from "@/hooks/use-transactions";
-import { useWatchlist } from "@/hooks/use-watchlist";
+import { useToast } from "@/hooks/use-toast";
 import { ArrowUpRight, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { useWatchlist } from "@/hooks/user-watchlist";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -109,13 +110,15 @@ export default function DashboardPage() {
             ) : (
               <div
                 className={`text-2xl font-bold ${
-                  portfolio?.totalGainLoss >= 0
+                  (portfolio?.totalGainLoss ?? 0) >= 0
                     ? "text-green-500"
                     : "text-red-500"
                 }`}
               >
-                {portfolio?.totalGainLoss >= 0 ? "+" : ""}$
-                {Math.abs(portfolio?.totalGainLoss || 0).toLocaleString()}
+                {portfolio?.totalGainLoss && portfolio.totalGainLoss >= 0
+                  ? "+"
+                  : ""}
+                ${Math.abs(portfolio?.totalGainLoss ?? 0).toLocaleString()}
               </div>
             )}
           </CardContent>

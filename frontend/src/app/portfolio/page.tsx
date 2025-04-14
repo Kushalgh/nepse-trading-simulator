@@ -110,13 +110,13 @@ export default function PortfolioPage() {
             ) : (
               <div
                 className={`text-2xl font-bold ${
-                  portfolio?.totalGainLoss >= 0
+                  (portfolio?.totalGainLoss ?? 0) >= 0
                     ? "text-green-500"
                     : "text-red-500"
                 }`}
               >
-                {portfolio?.totalGainLoss >= 0 ? "+" : ""}$
-                {Math.abs(portfolio?.totalGainLoss || 0).toLocaleString()}
+                {(portfolio?.totalGainLoss ?? 0) >= 0 ? "+" : ""}$
+                {Math.abs(portfolio?.totalGainLoss ?? 0).toLocaleString()}
               </div>
             )}
           </CardContent>

@@ -1,6 +1,6 @@
 import type React from "react";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/toaster";
+// import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/auth-context";
 import { SocketProvider } from "@/contexts/socket-context";
 import { Inter } from "next/font/google";
@@ -21,19 +21,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
+        {/* <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
-        >
-          <AuthProvider>
-            <SocketProvider>
-              {children}
-              <Toaster />
-            </SocketProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        > */}
+        <AuthProvider>
+          <SocketProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </SocketProvider>
+        </AuthProvider>
+        {/* </ThemeProvider> */}
       </body>
     </html>
   );

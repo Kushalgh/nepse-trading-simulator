@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -54,6 +54,7 @@ export default function SignupPage() {
         toast({
           title: "Account created",
           description: "Your account has been created successfully!",
+          variant: "success",
         });
         router.push("/dashboard");
       }
@@ -68,6 +69,7 @@ export default function SignupPage() {
     toast({
       title: "Account created",
       description: "Your account has been created successfully!",
+      variant: "success",
     });
     router.push("/dashboard");
   };

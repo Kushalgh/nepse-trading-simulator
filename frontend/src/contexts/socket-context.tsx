@@ -5,7 +5,7 @@ import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { useAuth } from "./auth-context";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -77,6 +77,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       toast({
         title: "Order Matched",
         description: `Your order for ${data.transaction.quantity} ${data.transaction.stock.symbol} has been matched.`,
+        variant: "success",
       });
     });
 
@@ -84,6 +85,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       toast({
         title: "Order Executed",
         description: `Your limit order for ${data.order.quantity} ${data.order.stock.symbol} has been executed.`,
+        variant: "success",
       });
     });
 
@@ -91,6 +93,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       toast({
         title: "Order Cancelled",
         description: `Your order has been cancelled.`,
+        variant: "info",
       });
     });
 
@@ -98,6 +101,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       toast({
         title: "Achievement Unlocked!",
         description: `You've earned the "${data.achievement.name}" achievement!`,
+        variant: "success",
       });
     });
 
