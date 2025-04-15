@@ -22,8 +22,20 @@ import { CONSTANTS } from "./constants/constants";
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: "*" } });
-app.use(cors());
+const io = new Server(httpServer, {
+  cors: {
+    origin: "http://localhost:3001",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+app.use(
+  cors({
+    origin: "http://localhost:3001",
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(passport.initialize());
