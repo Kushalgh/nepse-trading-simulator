@@ -6,6 +6,7 @@ import stockRoutes from "./routes/stockRoutes";
 import portfolioRoutes from "./routes/portfolioRoutes";
 import tradeRoutes from "./routes/tradeRoutes";
 import passport from "./utils/passport";
+import cors from "cors";
 import gamificationRoutes from "./routes/gamificationRoutes";
 import { updateLeaderboard } from "./services/leaderboardService";
 import { setIo as setAchievementIo } from "./services/achievementService";
@@ -22,6 +23,7 @@ import { CONSTANTS } from "./constants/constants";
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
+app.use(cors());
 
 app.use(express.json());
 app.use(passport.initialize());
